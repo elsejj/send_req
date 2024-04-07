@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -20,6 +19,7 @@ class VarSetter extends StatefulWidget {
 class VarSetterState extends State<VarSetter> {
   final TextEditingController _controller = TextEditingController();
   Object? _value;
+  String _textValue = '';
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +36,10 @@ class VarSetterState extends State<VarSetter> {
   void initState() {
     super.initState();
     _controller.addListener(() {
+      if (_textValue != _controller.text) {
+        _value = null;
+        _textValue = _controller.text;
+      }
       var newValue = _value ?? _controller.text;
       Provider.of<TemplateModel>(context, listen: false)
           .setVariable(widget.name, newValue);
@@ -84,7 +88,6 @@ class VarSetterState extends State<VarSetter> {
             child: TextField(
           decoration: InputDecoration(labelText: widget.name),
           controller: _controller,
-          onChanged: (value) => _value = null,
         )),
         IconButton(
           onPressed: () async {
@@ -96,7 +99,8 @@ class VarSetterState extends State<VarSetter> {
               var file = File(files.files.single.path!);
               var bytes = await file.readAsBytes();
               _value = bytes;
-              _controller.text = utf8.decode(bytes);
+              _textValue = "文件 ${file.path} ${bytes.length} 字节";
+              _controller.text = _textValue;
             } catch (e) {
               debugPrint('Failed to read file: $e');
             }

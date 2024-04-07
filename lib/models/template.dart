@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,7 +7,7 @@ import 'package:send_req/models/pipes.dart';
 // a variable in the template
 class Variable {
   String name = '';
-  Object? _value;
+  Object? value;
 
   List<String> pipes = [];
   final int startPos;
@@ -26,76 +25,26 @@ class Variable {
     pipes = parts.skip(1).map((e) => e.trim()).toList();
   }
 
-  set value(Object? newValue) {
-    _value = buildValue(newValue);
-  }
-
-  Object? get value => _value;
-
-  String get valueAsString {
-    if (_value == null) {
+  String get builded {
+    if (value == null) {
       return '';
     }
-    switch (_value) {
-      case String text:
-        return text;
-      case Uint8List bytes:
-        return utf8.decode(bytes);
-      default:
-        return '';
-    }
-  }
-
-  bool trySetValue(Object? newValue) {
-    newValue = buildValue(newValue);
-    if (equals(_value, newValue)) {
-      return false;
-    }
-    _value = newValue;
-    return true;
-  }
-
-  bool equals(Object? left, Object? right) {
-    if (left == null && right == null) {
-      return true;
-    }
-    if (left == null || right == null) {
-      return false;
-    }
-    if (left.runtimeType != right.runtimeType) {
-      return false;
-    }
-    if (left is String && right is String) {
-      return left == right;
-    }
-    if (left is Uint8List && right is Uint8List) {
-      return left.length == right.length &&
-          left.every((e) => right.contains(e));
-    }
-    return false;
-  }
-
-  Object? buildValue(Object? newValue) {
-    if (newValue == null) {
-      return null;
-    }
-    Object? value;
     if (pipes.isEmpty) {
-      switch (newValue) {
+      switch (value) {
         case String text:
-          value = text;
-          break;
+          return text;
         case Uint8List bytes:
-          value = utf8.decode(bytes);
-          break;
+          return value = bytes.toString();
+        default:
+          return value.toString();
       }
     } else {
-      value = newValue;
+      var newValue = value!;
       for (var pipe in pipes) {
-        value = applyPipe(pipe, value!);
+        newValue = applyPipe(pipe, newValue);
       }
+      return newValue.toString();
     }
-    return value;
   }
 }
 
@@ -134,25 +83,17 @@ class TemplateModel extends ChangeNotifier {
 
   String get filePath => _filePath;
 
-  Object? setVariable(String name, Object? value) {
+  void setVariable(String name, Object? value) {
+    bool changed = false;
     for (var v in _variables) {
       if (v.name == name) {
-        if (v.trySetValue(value)) {
-          notifyListeners();
-        }
-        return v.value;
+        changed = v.value != value;
+        v.value = value;
       }
     }
-    return null;
-  }
-
-  String getVariable(String name) {
-    for (var v in _variables) {
-      if (v.name == name) {
-        return v.valueAsString;
-      }
+    if (changed) {
+      notifyListeners();
     }
-    return '';
   }
 
   bool get hasVariables => _variables.isNotEmpty;
@@ -160,7 +101,13 @@ class TemplateModel extends ChangeNotifier {
   bool get loaded => _template.isNotEmpty;
 
   List<String> get variableNames {
-    return _variables.map((e) => e.name).toList();
+    var names = <String>[];
+    for (var v in _variables) {
+      if (!names.contains(v.name)) {
+        names.add(v.name);
+      }
+    }
+    return names;
   }
 
   String get replaced {
@@ -169,9 +116,9 @@ class TemplateModel extends ChangeNotifier {
     var start = 0;
     for (var v in _variables) {
       parts.add(result.substring(start, v.startPos));
-      var value = v.valueAsString;
+      var value = v.builded;
       if (value.isNotEmpty) {
-        parts.add(v.valueAsString);
+        parts.add(v.builded);
       } else {
         parts.add(result.substring(v.startPos, v.endPos));
       }

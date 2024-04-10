@@ -13,6 +13,8 @@ class HttpFile extends ChangeNotifier {
   static final headerPattern = RegExp(r'(\S+): (.+)');
 
   void executeSync() {
+    result = '等待请求返回，请稍后...';
+    notifyListeners();
     execute().then((value) {
       result = value;
       notifyListeners();
@@ -33,12 +35,20 @@ class HttpFile extends ChangeNotifier {
 
     if (body.isNotEmpty) {
       request.body = body;
-      request.headers['Content-Length'] = body.codeUnits.length.toString();
+      //request.headers['Content-Length'] = (body.length + 2).toString();
     }
-
+    var t1 = DateTime.now();
     var resp = await request.send();
+    var t2 = DateTime.now();
 
     List<String> result = [];
+
+    var duration = (t2.difference(t1).inMilliseconds.toDouble()) / 1000.0;
+    if (duration > 1) {
+      result.add('(请求耗时: ${duration.toStringAsFixed(1)}s)');
+    } else {
+      result.add('(请求耗时: ${duration.toStringAsFixed(3)}s)');
+    }
 
     result.add('HTTP/${resp.statusCode} ${resp.reasonPhrase}');
     resp.headers.forEach((key, value) {

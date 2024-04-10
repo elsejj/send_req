@@ -20,6 +20,7 @@ class VarSetterState extends State<VarSetter> {
   final TextEditingController _controller = TextEditingController();
   Object? _value;
   String _textValue = '';
+  File? _file;
 
   @override
   Widget build(BuildContext context) {
@@ -95,21 +96,29 @@ class VarSetterState extends State<VarSetter> {
             if (files == null || files.files.single.path == null) {
               return;
             }
-            try {
-              var file = File(files.files.single.path!);
-              var bytes = await file.readAsBytes();
-              _value = bytes;
-              _textValue = "文件 ${file.path} ${bytes.length} 字节";
-              _controller.text = _textValue;
-            } catch (e) {
-              debugPrint('Failed to read file: $e');
-            }
+            _readFile(files.files.single.path!);
           },
           icon: const Icon(Icons.file_open_outlined),
           tooltip: '以文件内容填充',
         ),
       ],
     );
+  }
+
+  void _readFile(String filePath) async {
+    if (filePath.isEmpty) {
+      return;
+    }
+
+    try {
+      _file = File(filePath);
+      var bytes = await _file!.readAsBytes();
+      _value = bytes;
+      _textValue = "文件 ${_file!.path} ${bytes.length} 字节";
+      _controller.text = _textValue;
+    } catch (e) {
+      debugPrint('Failed to read file: $e');
+    }
   }
 }
 
